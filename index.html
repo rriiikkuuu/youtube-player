@@ -3,6 +3,618 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>유튜브 플레이어 (연속 재생)</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class" };
+    </script>
+
+    <style>
+      /* 고급 다크(차콜) 느낌 보정 */
+      :root {
+        color-scheme: dark;
+      }
+    </style>
+  </head>
+
+  <body class="bg-zinc-950 text-zinc-100">
+    <div class="min-h-screen">
+      <header class="border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div>
+            <div class="text-lg font-semibold tracking-tight">유튜브 플레이어</div>
+            <div class="text-sm text-zinc-400">
+              `youtube-nocookie.com` 기반 임베드로 재생합니다.
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button
+              id="btnTheme"
+              type="button"
+              class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
+            >
+              다크 모드
+            </button>
+            <a
+              class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
+              href="https://www.youtube-nocookie.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              nocookie
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main class="mx-auto max-w-7xl px-4 py-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <!-- Left: playlist input -->
+          <section class="rounded-2xl border border-zinc-800/80 bg-zinc-950 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="text-base font-semibold">재생 목록</h2>
+                <p class="mt-1 text-sm text-zinc-400">
+                  유튜브 URL 또는 영상 ID를 한 줄에 하나씩 입력하세요. 새로고침해도 자동 저장됩니다.
+                </p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  id="btnApply"
+                  type="button"
+                  class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium hover:bg-indigo-500"
+                >
+                  목록 적용
+                </button>
+                <button
+                  id="btnClear"
+                  type="button"
+                  class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
+                >
+                  비우기
+                </button>
+              </div>
+            </div>
+
+            <label for="urls" class="mt-4 block text-sm font-medium text-zinc-200">URL/ID 목록</label>
+            <textarea
+              id="urls"
+              class="mt-2 h-44 w-full resize-y rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+              placeholder="예) https://www.youtube.com/watch?v=dQw4w9WgXcQ&#10;예) youtu.be/9bZkp7q19f0&#10;예) dQw4w9WgXcQ"
+              spellcheck="false"
+            ></textarea>
+
+            <div class="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <label class="inline-flex items-center gap-2 text-sm text-zinc-300">
+                <input
+                  id="chkAutoNext"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-indigo-600 focus:ring-indigo-500"
+                  checked
+                />
+                다음 영상 자동 재생
+              </label>
+
+              <div class="flex items-center gap-2">
+                <button
+                  id="btnPrev"
+                  type="button"
+                  class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+                  disabled
+                >
+                  이전 곡
+                </button>
+                <button
+                  id="btnNext"
+                  type="button"
+                  class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+                  disabled
+                >
+                  다음 곡
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="text-sm font-medium">현재 상태</div>
+                <div id="badge" class="rounded-full bg-zinc-800 px-2 py-1 text-xs text-zinc-200">대기</div>
+              </div>
+              <div id="status" class="mt-2 text-sm text-zinc-300">
+                “목록 적용”을 누른 뒤 재생할 항목을 선택하세요.
+              </div>
+            </div>
+
+            <div class="mt-4">
+              <div class="flex items-center justify-between gap-3">
+                <h3 class="text-sm font-semibold text-zinc-200">재생 목록 목록</h3>
+                <div id="count" class="text-xs text-zinc-400">0개</div>
+              </div>
+              <ul
+                id="playlist"
+                class="mt-2 max-h-64 overflow-auto rounded-xl border border-zinc-800 bg-zinc-900/30"
+              ></ul>
+            </div>
+          </section>
+
+          <!-- Right: player -->
+          <section class="rounded-2xl border border-zinc-800/80 bg-zinc-950 p-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 class="text-base font-semibold">플레이어</h2>
+                <p class="mt-1 text-sm text-zinc-400">일시정지 후 “재생”은 0:00이 아니라 현재 위치에서 이어집니다.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  id="btnPlay"
+                  type="button"
+                  class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium hover:bg-emerald-500 disabled:opacity-50"
+                  disabled
+                >
+                  재생
+                </button>
+                <button
+                  id="btnPause"
+                  type="button"
+                  class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+                  disabled
+                >
+                  일시정지
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+              <div class="aspect-video w-full">
+                <div id="player" class="h-full w-full"></div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
+                <div class="text-xs text-zinc-400">현재 영상</div>
+                <div id="nowTitle" class="mt-1 line-clamp-2 text-sm font-medium text-zinc-100">-</div>
+                <div id="nowId" class="mt-1 text-xs text-zinc-500">-</div>
+              </div>
+              <div class="rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
+                <div class="text-xs text-zinc-400">안정성 힌트</div>
+                <div class="mt-1 text-sm text-zinc-200">nocookie + IFrame API</div>
+                <div class="mt-1 text-xs text-zinc-500">
+                  네트워크/브라우저 정책에 따라 자동 재생이 제한될 수 있습니다.
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "yt_player_playlist_v1";
+
+      const $ = (id) => document.getElementById(id);
+
+      const els = {
+        btnTheme: $("btnTheme"),
+        btnApply: $("btnApply"),
+        btnClear: $("btnClear"),
+        btnPrev: $("btnPrev"),
+        btnNext: $("btnNext"),
+        btnPlay: $("btnPlay"),
+        btnPause: $("btnPause"),
+        chkAutoNext: $("chkAutoNext"),
+        urls: $("urls"),
+        playlist: $("playlist"),
+        count: $("count"),
+        badge: $("badge"),
+        status: $("status"),
+        nowTitle: $("nowTitle"),
+        nowId: $("nowId"),
+      };
+
+      /** @type {{ id: string, raw: string }[]} */
+      let items = [];
+      let currentIndex = -1;
+
+      /** @type {any} */
+      let player = null;
+      let apiReady = false;
+      let userGestureUnlocked = false;
+
+      function setBadge(text, tone = "neutral") {
+        const toneClass =
+          tone === "good"
+            ? "bg-emerald-900 text-emerald-100"
+            : tone === "warn"
+              ? "bg-amber-900 text-amber-100"
+              : tone === "bad"
+                ? "bg-rose-900 text-rose-100"
+                : "bg-zinc-800 text-zinc-200";
+        els.badge.className = `rounded-full px-2 py-1 text-xs ${toneClass}`;
+        els.badge.textContent = text;
+      }
+
+      function setStatus(text) {
+        els.status.textContent = text;
+      }
+
+      function extractYouTubeId(input) {
+        const s = (input || "").trim();
+        if (!s) return null;
+        if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+
+        let url;
+        try {
+          url = new URL(s);
+        } catch {
+          try {
+            url = new URL("https://" + s);
+          } catch {
+            return null;
+          }
+        }
+
+        const host = url.hostname.replace(/^www\./, "");
+        if (host === "youtu.be") {
+          const id = url.pathname.split("/").filter(Boolean)[0];
+          return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+        }
+        if (host.endsWith("youtube.com")) {
+          const v = url.searchParams.get("v");
+          if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+
+          const parts = url.pathname.split("/").filter(Boolean);
+          for (let i = 0; i < parts.length; i++) {
+            if (["shorts", "embed", "v", "watch"].includes(parts[i]) && parts[i + 1]) {
+              const cand = parts[i + 1];
+              if (/^[a-zA-Z0-9_-]{11}$/.test(cand)) return cand;
+            }
+          }
+        }
+        return null;
+      }
+
+      function parseLinesToItems(text) {
+        const lines = (text || "")
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .filter((l) => l && !l.startsWith("#"));
+
+        const out = [];
+        const seen = new Set();
+        for (const raw of lines) {
+          const id = extractYouTubeId(raw);
+          if (!id) continue;
+          if (seen.has(id)) continue;
+          seen.add(id);
+          out.push({ id, raw });
+        }
+        return out;
+      }
+
+      function saveToStorage() {
+        try {
+          localStorage.setItem(STORAGE_KEY, els.urls.value || "");
+        } catch {}
+      }
+
+      function loadFromStorage() {
+        try {
+          const v = localStorage.getItem(STORAGE_KEY);
+          if (typeof v === "string") els.urls.value = v;
+        } catch {}
+      }
+
+      function renderPlaylist() {
+        els.playlist.innerHTML = "";
+        els.count.textContent = `${items.length}개`;
+
+        if (!items.length) {
+          const li = document.createElement("li");
+          li.className = "px-3 py-3 text-sm text-zinc-400";
+          li.textContent = "목록이 비어 있습니다.";
+          els.playlist.appendChild(li);
+          return;
+        }
+
+        items.forEach((it, idx) => {
+          const li = document.createElement("li");
+          li.className =
+            "group flex cursor-pointer items-center justify-between gap-3 border-b border-zinc-800 px-3 py-3 last:border-b-0 hover:bg-zinc-900/40";
+
+          const left = document.createElement("div");
+          left.className = "min-w-0";
+
+          const title = document.createElement("div");
+          title.className = "truncate text-sm font-medium text-zinc-100";
+          title.textContent = it.raw || it.id;
+
+          const sub = document.createElement("div");
+          sub.className = "mt-1 truncate text-xs text-zinc-500";
+          sub.textContent = it.id;
+
+          left.appendChild(title);
+          left.appendChild(sub);
+
+          const right = document.createElement("div");
+          right.className = "shrink-0 text-xs";
+          if (idx === currentIndex) {
+            right.classList.add("text-indigo-200");
+            right.textContent = "재생 중";
+            li.classList.add("bg-indigo-950/30");
+          } else {
+            right.classList.add("text-zinc-500");
+            right.textContent = "";
+          }
+
+          li.addEventListener("click", () => {
+            userGestureUnlocked = true;
+            playIndex(idx, true);
+          });
+
+          li.appendChild(left);
+          li.appendChild(right);
+          els.playlist.appendChild(li);
+        });
+      }
+
+      function updateControls() {
+        const hasCurrent = currentIndex >= 0 && currentIndex < items.length;
+        els.btnPrev.disabled = !hasCurrent || currentIndex === 0;
+        els.btnNext.disabled = !hasCurrent || currentIndex === items.length - 1;
+        els.btnPlay.disabled = !hasCurrent || !apiReady;
+        els.btnPause.disabled = !hasCurrent || !apiReady;
+      }
+
+      function updateNowPanel() {
+        const it = items[currentIndex];
+        els.nowTitle.textContent = it?.raw || "-";
+        els.nowId.textContent = it?.id ? `ID: ${it.id}` : "-";
+      }
+
+      function ensureIframeApi() {
+        if (window.YT && window.YT.Player) {
+          apiReady = true;
+          return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-yt-iframe-api="1"]');
+          if (!existing) {
+            const tag = document.createElement("script");
+            tag.src = "https://www.youtube.com/iframe_api";
+            tag.async = true;
+            tag.dataset.ytIframeApi = "1";
+            tag.onerror = () => reject(new Error("YouTube IFrame API를 불러오지 못했습니다."));
+            document.head.appendChild(tag);
+          }
+
+          const prev = window.onYouTubeIframeAPIReady;
+          window.onYouTubeIframeAPIReady = () => {
+            if (typeof prev === "function") {
+              try {
+                prev();
+              } catch {}
+            }
+            apiReady = true;
+            resolve();
+          };
+
+          const t = setInterval(() => {
+            if (window.YT && window.YT.Player) {
+              clearInterval(t);
+              apiReady = true;
+              resolve();
+            }
+          }, 200);
+          setTimeout(() => {
+            clearInterval(t);
+            if (!(window.YT && window.YT.Player)) reject(new Error("YouTube IFrame API 초기화가 지연되고 있습니다."));
+          }, 10000);
+        });
+      }
+
+      async function initPlayerIfNeeded(videoId) {
+        await ensureIframeApi();
+        if (player) return;
+
+        player = new window.YT.Player("player", {
+          host: "https://www.youtube-nocookie.com",
+          videoId: videoId || "",
+          width: "100%",
+          height: "100%",
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            rel: 0,
+            modestbranding: 1,
+            playsinline: 1,
+          },
+          events: {
+            onReady: () => {
+              setBadge("준비", "good");
+              setStatus("플레이어가 준비되었습니다.");
+              updateControls();
+            },
+            onStateChange: (e) => {
+              if (!window.YT) return;
+              if (e.data === window.YT.PlayerState.ENDED) {
+                if (els.chkAutoNext.checked) playNext();
+              }
+            },
+            onError: (e) => {
+              setBadge("실패", "bad");
+              setStatus(`재생 오류가 발생했습니다. (오류 코드: ${e.data})`);
+            },
+          },
+        });
+      }
+
+      async function playIndex(idx, shouldAutoplay) {
+        if (idx < 0 || idx >= items.length) return;
+        currentIndex = idx;
+        renderPlaylist();
+        updateNowPanel();
+        updateControls();
+
+        const it = items[idx];
+        setBadge("로딩 중", "warn");
+        setStatus(`영상 로딩 중: ${it.id}`);
+
+        try {
+          await initPlayerIfNeeded(it.id);
+
+          const canAutoplay = shouldAutoplay && userGestureUnlocked;
+          if (canAutoplay) {
+            player.loadVideoById(it.id);
+            setBadge("재생 중", "good");
+            setStatus(`재생 중: ${it.raw || it.id}`);
+          } else {
+            player.cueVideoById(it.id);
+            setBadge("준비", "good");
+            setStatus("자동 재생이 제한될 수 있어요. “재생” 버튼을 눌러 시작해 주세요.");
+          }
+        } catch (err) {
+          setBadge("실패", "bad");
+          setStatus(`오류: ${err?.message || String(err)}`);
+        } finally {
+          updateControls();
+        }
+      }
+
+      function playNext() {
+        if (currentIndex < 0) return;
+        const next = currentIndex + 1;
+        if (next >= items.length) {
+          setBadge("완료", "good");
+          setStatus("목록의 마지막 영상까지 재생했습니다.");
+          return;
+        }
+        playIndex(next, true);
+      }
+
+      function playPrev() {
+        if (currentIndex <= 0) return;
+        playIndex(currentIndex - 1, true);
+      }
+
+      // UI events
+      els.btnTheme.addEventListener("click", () => {
+        document.documentElement.classList.toggle("dark");
+        const isDark = document.documentElement.classList.contains("dark");
+        els.btnTheme.textContent = isDark ? "다크 모드" : "라이트 모드";
+      });
+
+      // localStorage: 입력 즉시 저장
+      els.urls.addEventListener("input", () => saveToStorage());
+
+      els.btnApply.addEventListener("click", async () => {
+        saveToStorage();
+        items = parseLinesToItems(els.urls.value);
+        currentIndex = items.length ? 0 : -1;
+        renderPlaylist();
+        updateNowPanel();
+
+        if (!items.length) {
+          setBadge("대기", "neutral");
+          setStatus("유효한 유튜브 URL/ID를 찾지 못했습니다. 입력을 확인해 주세요.");
+          updateControls();
+          return;
+        }
+
+        setBadge("준비", "good");
+        setStatus("목록을 적용했습니다. 첫 영상을 준비합니다.");
+        await playIndex(0, false);
+      });
+
+      els.btnClear.addEventListener("click", () => {
+        els.urls.value = "";
+        saveToStorage();
+        items = [];
+        currentIndex = -1;
+        userGestureUnlocked = false;
+
+        setBadge("대기", "neutral");
+        setStatus("비웠습니다.");
+        els.nowTitle.textContent = "-";
+        els.nowId.textContent = "-";
+        renderPlaylist();
+        updateControls();
+
+        if (player && player.stopVideo) {
+          try {
+            player.stopVideo();
+          } catch {}
+        }
+      });
+
+      els.btnNext.addEventListener("click", () => {
+        userGestureUnlocked = true;
+        playNext();
+      });
+      els.btnPrev.addEventListener("click", () => {
+        userGestureUnlocked = true;
+        playPrev();
+      });
+
+      // CRITICAL: 일시정지 후 재생은 "재개"만 (0:00 재시작 방지)
+      els.btnPlay.addEventListener("click", async () => {
+        if (currentIndex < 0) return;
+        userGestureUnlocked = true;
+        const it = items[currentIndex];
+        try {
+          await initPlayerIfNeeded(it.id);
+          const state = player.getPlayerState ? player.getPlayerState() : null;
+          if (window.YT && state === window.YT.PlayerState.CUED) {
+            player.playVideo();
+          } else if (window.YT && state === window.YT.PlayerState.PAUSED) {
+            player.playVideo(); // 재개
+          } else if (window.YT && state === window.YT.PlayerState.ENDED) {
+            player.playVideo(); // 다시 재생(이건 정상적으로 0부터)
+          } else if (window.YT && state === window.YT.PlayerState.UNSTARTED) {
+            // 아직 로드 안 됐으면 로드 후 재생
+            player.loadVideoById(it.id);
+          } else {
+            // 버퍼링/재생 중 등은 playVideo로 정리
+            player.playVideo();
+          }
+          setBadge("재생 중", "good");
+          setStatus(`재생 중: ${it.raw || it.id}`);
+        } catch (err) {
+          setBadge("실패", "bad");
+          setStatus(`재생 오류: ${err?.message || String(err)}`);
+        }
+      });
+
+      els.btnPause.addEventListener("click", async () => {
+        if (currentIndex < 0) return;
+        const it = items[currentIndex];
+        try {
+          await initPlayerIfNeeded(it.id);
+          player.pauseVideo();
+          setBadge("일시정지", "warn");
+          setStatus("일시정지했습니다.");
+        } catch {}
+      });
+
+      // boot
+      loadFromStorage();
+      items = parseLinesToItems(els.urls.value);
+      currentIndex = items.length ? 0 : -1;
+      renderPlaylist();
+      updateNowPanel();
+      updateControls();
+      setBadge("대기", "neutral");
+    </script>
+  </body>
+</html>
+
+<!doctype html>
+<html lang="ko" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>유튜브 연속 재생 (YouTube IFrame API)</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
