@@ -1,272 +1,689 @@
 <!doctype html>
-<html lang="ko">
-<head>
+<html lang="ko" class="dark">
+  <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YT PLAYER PRO V11 - GitHub Bypass</title>
+    <title>유튜브 플레이어 (연속 재생)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { darkMode: "class" };
+    </script>
     <style>
-        /* [SYSTEM ARCHITECTURE: ZERO EXTERNAL CALL]
-           보안 오류를 방지하기 위해 모든 스타일과 스크립트를 내부에 포함합니다.
-        */
-        :root {
-            --bg: #020617;
-            --panel: #0f172a;
-            --accent: #4f46e5;
-            --border: #1e293b;
-            --text: #f8fafc;
-            --text-dim: #94a3b8;
-        }
-
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: system-ui, -apple-system, sans-serif;
-            display: flex;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 2rem;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 2rem;
-        }
-
-        @media (max-width: 1024px) {
-            .container { grid-template-columns: 1fr; }
-        }
-
-        /* 메인 플레이어 디자인 */
-        .stage-wrapper { display: flex; flex-direction: column; gap: 1.5rem; }
-        
-        .stage {
-            background: #000;
-            border-radius: 2rem;
-            aspect-ratio: 16 / 9;
-            overflow: hidden;
-            border: 1px solid var(--border);
-            position: relative;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-        }
-
-        iframe { width: 100%; height: 100%; border: none; }
-
-        .system-msg {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg);
-            z-index: 10;
-        }
-
-        /* 컨트롤 센터 */
-        .controls {
-            background: var(--panel);
-            padding: 2rem;
-            border-radius: 2rem;
-            border: 1px solid var(--border);
-        }
-
-        .input-row { display: flex; gap: 0.5rem; margin-top: 1rem; }
-        input {
-            flex: 1;
-            background: #000;
-            border: 1px solid var(--border);
-            color: #fff;
-            padding: 1rem;
-            border-radius: 1rem;
-            outline: none;
-        }
-
-        .btn {
-            padding: 1rem 1.5rem;
-            border-radius: 1rem;
-            border: none;
-            background: var(--accent);
-            color: white;
-            font-weight: 700;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-
-        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-
-        /* 사이드바 */
-        .sidebar {
-            background: var(--panel);
-            border-radius: 2rem;
-            padding: 2rem;
-            border: 1px solid var(--border);
-            height: fit-content;
-        }
-
-        .list {
-            margin-top: 1.5rem;
-            list-style: none;
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .list-item {
-            padding: 1rem;
-            background: #1e293b55;
-            border-radius: 0.75rem;
-            margin-bottom: 0.5rem;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8rem;
-            border: 1px solid transparent;
-        }
-
-        .list-item.active { border-color: var(--accent); background: #4f46e522; }
-        .btn-x { color: #f43f5e; font-weight: 900; }
-
-        /* [ENGINE DOCUMENTATION LOGS]
-           V11 보안 패치: Same-Origin 정책 우회를 위한 릴레이 알고리즘 탑재.
-           ... (이하 분량 확보를 위한 상세 주석 및 시스템 로그 수백 줄 포함) ...
-        */
+      :root {
+        color-scheme: dark;
+      }
     </style>
-</head>
-<body>
-
-    <div class="container">
-        <div class="stage-wrapper">
-            <div class="stage">
-                <div id="ready-ui" class="system-msg">
-                    <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">💿</div>
-                    <p style="color: var(--text-dim); font-size: 0.7rem; font-weight: 900; letter-spacing: 0.2em;">V11 BYPASS ENGINE READY</p>
-                </div>
-                <iframe id="engine" allow="autoplay; fullscreen"></iframe>
-            </div>
-
-            <div class="controls">
-                <div style="font-size: 0.65rem; font-weight: 900; color: var(--accent); margin-bottom: 0.5rem;">V11 SYSTEM CONSOLE</div>
-                <h1 id="vTitle" style="font-size: 1.25rem; font-weight: 900; margin-bottom: 1rem;">영상 주소를 입력하세요</h1>
-                
-                <div class="input-row">
-                    <input id="vIn" type="text" placeholder="유튜브 URL 입력">
-                    <button class="btn" onclick="vApp.add()">ADD</button>
-                </div>
-
-                <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-                    <button class="btn" id="mBtn" onclick="vApp.toggle()" style="flex: 2; background: #fff; color: #000;">엔진 가동</button>
-                    <button class="btn" onclick="vApp.nav(-1)" style="background: var(--bg); flex: 1;">이전</button>
-                    <button class="btn" onclick="vApp.nav(1)" style="background: var(--bg); flex: 1;">다음</button>
-                </div>
-            </div>
+  </head>
+  <body class="min-h-screen bg-zinc-950 text-zinc-100">
+    <div class="min-h-screen">
+      <header class="border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur">
+        <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div>
+            <div class="text-lg font-semibold tracking-tight">유튜브 플레이어</div>
+            <div class="text-sm text-zinc-400">단일 UI · 목록 저장 · 자동 다음 · 일시정지 재개</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span
+              id="hostBadge"
+              class="rounded-full border border-zinc-800 bg-zinc-900/50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-300"
+              >Host: youtube-nocookie.com</span
+            >
+            <button
+              id="btnTheme"
+              type="button"
+              class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
+            >
+              다크 모드
+            </button>
+          </div>
         </div>
+      </header>
 
-        <aside class="sidebar">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 style="font-size: 0.9rem; font-weight: 900;">INDEX</h3>
-                <span id="vStat" style="font-size: 0.65rem; color: var(--accent); font-weight: 900;">0 ITEMS</span>
+      <main class="mx-auto max-w-7xl px-4 py-6">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <!-- Left sidebar -->
+          <section class="lg:col-span-4 rounded-2xl border border-zinc-800/80 bg-zinc-950 p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="text-base font-semibold">재생 목록</h2>
+                <p class="mt-1 text-sm text-zinc-400">URL/ID를 추가하면 자동 저장됩니다.</p>
+              </div>
+              <div class="text-xs text-zinc-400"><span id="countBadge">0곡</span></div>
             </div>
-            <ul id="vList" class="list"></ul>
-            <button onclick="vApp.wipe()" style="margin-top: 1.5rem; background: none; border: none; color: #444; font-size: 0.65rem; cursor: pointer;">데이터 초기화</button>
-        </aside>
+
+            <div class="mt-4 space-y-2">
+              <label class="block text-sm font-medium text-zinc-200" for="addUrl">URL 또는 ID</label>
+              <div class="flex gap-2">
+                <input
+                  id="addUrl"
+                  type="text"
+                  class="flex-1 rounded-xl border border-zinc-800 bg-zinc-900/50 px-3 py-2 text-sm text-zinc-100 placeholder:text-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30"
+                  placeholder="예) https://youtu.be/dQw4w9WgXcQ"
+                />
+                <button
+                  id="btnAdd"
+                  type="button"
+                  class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold hover:bg-indigo-500"
+                >
+                  추가
+                </button>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <label class="inline-flex items-center gap-2 text-sm text-zinc-300">
+                  <input
+                    id="chkAutoNext"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-zinc-700 bg-zinc-900 text-indigo-600 focus:ring-indigo-500"
+                    checked
+                  />
+                  다음 영상 자동 재생
+                </label>
+                <button
+                  id="btnClear"
+                  type="button"
+                  class="rounded-lg border border-zinc-800 bg-zinc-900 px-3 py-2 text-sm hover:bg-zinc-800"
+                >
+                  비우기
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="text-sm font-medium">현재 상태</div>
+                <div id="badge" class="rounded-full bg-zinc-800 px-2 py-1 text-xs text-zinc-200">대기</div>
+              </div>
+              <div id="status" class="mt-2 text-sm text-zinc-300">왼쪽에서 영상을 추가해 주세요.</div>
+            </div>
+
+            <ul
+              id="playlist"
+              class="mt-4 max-h-[360px] overflow-auto rounded-xl border border-zinc-800 bg-zinc-900/30"
+            ></ul>
+          </section>
+
+          <!-- Main area -->
+          <section class="lg:col-span-8 rounded-2xl border border-zinc-800/80 bg-zinc-950 p-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 class="text-base font-semibold">플레이어</h2>
+                <p class="mt-1 text-sm text-zinc-400">일시정지 후 “재생”은 현재 위치에서 재개됩니다.</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <button
+                  id="btnPrev"
+                  type="button"
+                  class="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+                  disabled
+                >
+                  이전 곡
+                </button>
+                <button
+                  id="btnPlay"
+                  type="button"
+                  class="rounded-xl bg-emerald-600 px-5 py-2 text-sm font-semibold hover:bg-emerald-500 disabled:opacity-50"
+                  disabled
+                >
+                  재생
+                </button>
+                <button
+                  id="btnPause"
+                  type="button"
+                  class="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+                  disabled
+                >
+                  일시정지
+                </button>
+                <button
+                  id="btnNext"
+                  type="button"
+                  class="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+                  disabled
+                >
+                  다음 곡
+                </button>
+              </div>
+            </div>
+
+            <div class="mt-4 overflow-hidden rounded-2xl border border-zinc-800 bg-black">
+              <div class="aspect-video w-full">
+                <div id="player" class="h-full w-full"></div>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
+                <div class="text-xs text-zinc-400">현재 영상</div>
+                <div id="nowTitle" class="mt-1 truncate text-sm font-medium text-zinc-100">-</div>
+                <div id="nowId" class="mt-1 text-xs text-zinc-500">-</div>
+              </div>
+              <div class="rounded-xl border border-zinc-800 bg-zinc-900/30 p-3">
+                <div class="text-xs text-zinc-400">참고</div>
+                <div class="mt-1 text-sm text-zinc-200">브라우저 정책에 따라 자동 재생이 제한될 수 있습니다.</div>
+                <div class="mt-1 text-xs text-zinc-500">처음 한 번은 “재생” 버튼을 눌러야 할 수 있어요.</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
     </div>
 
     <script>
-        /**
-         * [CORE V11 ENGINE]
-         * 깃허브 데스크톱 및 특정 브라우저에서 '연결 거부'가 뜨는 이유는
-         * 유튜브 공식 임베딩 방식이 보안 정책에 걸리기 때문입니다.
-         * V11은 임베딩 차단이 아예 없는 '오픈 스트리밍 노드'만 사용합니다.
-         */
-        const vApp = (function() {
-            const KEY = "YT_PRO_V11_FINAL";
+      // NOTE: 요청하신 "프록시로 광고 완전 차단" 구현은 제공할 수 없어,
+      // 안정적으로 제어 가능한 IFrame API 기반으로 구성했습니다.
+
+      const STORAGE_KEY = "yt_playlist_single_v1";
+      const $ = (id) => document.getElementById(id);
+
+      const els = {
+        btnTheme: $("btnTheme"),
+        addUrl: $("addUrl"),
+        btnAdd: $("btnAdd"),
+        btnClear: $("btnClear"),
+        chkAutoNext: $("chkAutoNext"),
+        playlist: $("playlist"),
+        countBadge: $("countBadge"),
+        badge: $("badge"),
+        status: $("status"),
+        nowTitle: $("nowTitle"),
+        nowId: $("nowId"),
+        btnPrev: $("btnPrev"),
+        btnPlay: $("btnPlay"),
+        btnPause: $("btnPause"),
+        btnNext: $("btnNext"),
+      };
+
+      /** @type {{id: string, label: string}[]} */
+      let list = [];
+      let currentIndex = -1;
+
+      /** @type {any} */
+      let player = null;
+      let apiReady = false;
+      let userGestureUnlocked = false;
+
+      function setBadge(text, tone = "neutral") {
+        const toneClass =
+          tone === "good"
+            ? "bg-emerald-900 text-emerald-100"
+            : tone === "warn"
+              ? "bg-amber-900 text-amber-100"
+              : tone === "bad"
+                ? "bg-rose-900 text-rose-100"
+                : "bg-zinc-800 text-zinc-200";
+        els.badge.className = `rounded-full px-2 py-1 text-xs ${toneClass}`;
+        els.badge.textContent = text;
+      }
+      function setStatus(text) {
+        els.status.textContent = text;
+      }
+
+      function extractYouTubeId(input) {
+        const s = (input || "").trim();
+        if (!s) return null;
+        if (/^[a-zA-Z0-9_-]{11}$/.test(s)) return s;
+        let url;
+        try {
+          url = new URL(s);
+        } catch {
+          try {
+            url = new URL("https://" + s);
+          } catch {
+            return null;
+          }
+        }
+        const host = url.hostname.replace(/^www\./, "");
+        if (host === "youtu.be") {
+          const id = url.pathname.split("/").filter(Boolean)[0];
+          return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : null;
+        }
+        if (host.endsWith("youtube.com")) {
+          const v = url.searchParams.get("v");
+          if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+          const parts = url.pathname.split("/").filter(Boolean);
+          for (let i = 0; i < parts.length; i++) {
+            if (["shorts", "embed", "v", "watch"].includes(parts[i]) && parts[i + 1]) {
+              const cand = parts[i + 1];
+              if (/^[a-zA-Z0-9_-]{11}$/.test(cand)) return cand;
+            }
+          }
+        }
+        return null;
+      }
+
+      function save() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+        } catch {}
+      }
+
+      function load() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            list = parsed.filter((x) => x && typeof x.id === "string" && typeof x.label === "string");
+          }
+        } catch {}
+      }
+
+      function render() {
+        els.countBadge.textContent = `${list.length}곡`;
+        els.playlist.innerHTML = "";
+        if (!list.length) {
+          const li = document.createElement("li");
+          li.className = "px-3 py-3 text-sm text-zinc-400";
+          li.textContent = "목록이 비어 있습니다.";
+          els.playlist.appendChild(li);
+          return;
+        }
+
+        list.forEach((item, idx) => {
+          const row = document.createElement("li");
+          row.className =
+            "flex items-center justify-between gap-3 border-b border-zinc-800 px-3 py-3 last:border-b-0 hover:bg-zinc-900/40";
+          if (idx === currentIndex) row.classList.add("bg-indigo-950/30");
+
+          const left = document.createElement("button");
+          left.type = "button";
+          left.className = "min-w-0 flex-1 text-left";
+          left.innerHTML = `
+            <div class="truncate text-sm font-medium ${idx === currentIndex ? "text-indigo-200" : "text-zinc-100"}">${
+              item.label
+            }</div>
+            <div class="mt-1 truncate text-xs text-zinc-500">${item.id}</div>
+          `;
+          left.addEventListener("click", () => {
+            userGestureUnlocked = true;
+            playIndex(idx, true);
+          });
+
+          const del = document.createElement("button");
+          del.type = "button";
+          del.className = "rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs text-zinc-200 hover:bg-zinc-800";
+          del.textContent = "삭제";
+          del.addEventListener("click", () => {
+            list.splice(idx, 1);
+            if (currentIndex === idx) currentIndex = -1;
+            else if (currentIndex > idx) currentIndex--;
+            save();
+            render();
+            syncNow();
+            syncControls();
+          });
+
+          row.appendChild(left);
+          row.appendChild(del);
+          els.playlist.appendChild(row);
+        });
+      }
+
+      function syncNow() {
+        const it = list[currentIndex];
+        els.nowTitle.textContent = it?.label || "-";
+        els.nowId.textContent = it?.id ? `ID: ${it.id}` : "-";
+      }
+
+      function syncControls() {
+        const hasCurrent = currentIndex >= 0 && currentIndex < list.length;
+        els.btnPrev.disabled = !hasCurrent || currentIndex === 0;
+        els.btnNext.disabled = !hasCurrent || currentIndex === list.length - 1;
+        els.btnPlay.disabled = !hasCurrent || !apiReady;
+        els.btnPause.disabled = !hasCurrent || !apiReady;
+      }
+
+      function ensureApi() {
+        if (window.YT && window.YT.Player) {
+          apiReady = true;
+          return Promise.resolve();
+        }
+        return new Promise((resolve, reject) => {
+          const existing = document.querySelector('script[data-yt-iframe-api="1"]');
+          if (!existing) {
+            const s = document.createElement("script");
+            s.src = "https://www.youtube.com/iframe_api";
+            s.async = true;
+            s.dataset.ytIframeApi = "1";
+            s.onerror = () => reject(new Error("YouTube IFrame API를 불러오지 못했습니다."));
+            document.head.appendChild(s);
+          }
+          const prev = window.onYouTubeIframeAPIReady;
+          window.onYouTubeIframeAPIReady = () => {
+            if (typeof prev === "function") {
+              try {
+                prev();
+              } catch {}
+            }
+            apiReady = true;
+            resolve();
+          };
+        });
+      }
+
+      async function initPlayerIfNeeded(videoId) {
+        await ensureApi();
+        if (player) return;
+        player = new window.YT.Player("player", {
+          host: "https://www.youtube-nocookie.com",
+          videoId: videoId || "",
+          width: "100%",
+          height: "100%",
+          playerVars: { autoplay: 0, controls: 1, rel: 0, modestbranding: 1, playsinline: 1 },
+          events: {
+            onReady: () => {
+              setBadge("준비", "good");
+              setStatus("플레이어가 준비되었습니다.");
+              syncControls();
+            },
+            onStateChange: (e) => {
+              if (!window.YT) return;
+              if (e.data === window.YT.PlayerState.ENDED && els.chkAutoNext.checked) {
+                playNext(true);
+              }
+            },
+            onError: (e) => {
+              setBadge("실패", "bad");
+              setStatus(`재생 오류가 발생했습니다. (오류 코드: ${e.data})`);
+              // 자동 복구: 다음 트랙으로 넘김(사용자 경험 개선)
+              if (els.chkAutoNext.checked) playNext(true);
+            },
+          },
+        });
+      }
+
+      async function playIndex(idx, tryAutoplay) {
+        if (idx < 0 || idx >= list.length) return;
+        currentIndex = idx;
+        render();
+        syncNow();
+
+        const it = list[idx];
+        setBadge("로딩 중", "warn");
+        setStatus(`영상 로딩 중: ${it.id}`);
+
+        try {
+          await initPlayerIfNeeded(it.id);
+          const canAutoplay = tryAutoplay && userGestureUnlocked;
+          if (canAutoplay) {
+            player.loadVideoById(it.id);
+            setBadge("재생 중", "good");
+            setStatus(`재생 중: ${it.label}`);
+          } else {
+            player.cueVideoById(it.id);
+            setBadge("준비", "good");
+            setStatus("자동 재생이 제한될 수 있어요. “재생” 버튼을 눌러 시작해 주세요.");
+          }
+        } catch (err) {
+          setBadge("실패", "bad");
+          setStatus(`오류: ${err?.message || String(err)}`);
+        } finally {
+          syncControls();
+        }
+      }
+
+      function playNext(autoplay) {
+        if (currentIndex < 0) return;
+        const next = currentIndex + 1;
+        if (next >= list.length) {
+          setBadge("완료", "good");
+          setStatus("목록의 마지막 영상까지 재생했습니다.");
+          return;
+        }
+        playIndex(next, autoplay);
+      }
+
+      function playPrev(autoplay) {
+        if (currentIndex <= 0) return;
+        playIndex(currentIndex - 1, autoplay);
+      }
+
+      // UI events
+      els.btnTheme.addEventListener("click", () => {
+        document.documentElement.classList.toggle("dark");
+        const isDark = document.documentElement.classList.contains("dark");
+        els.btnTheme.textContent = isDark ? "다크 모드" : "라이트 모드";
+      });
+
+      els.btnAdd.addEventListener("click", () => {
+        const raw = els.addUrl.value.trim();
+        const id = extractYouTubeId(raw);
+        if (!id) {
+          setBadge("실패", "bad");
+          setStatus("유효한 유튜브 URL/ID가 아닙니다.");
+          return;
+        }
+        list.push({ id, label: raw });
+        els.addUrl.value = "";
+        save();
+        render();
+        if (currentIndex === -1) {
+          currentIndex = 0;
+          syncNow();
+          syncControls();
+          setBadge("준비", "good");
+          setStatus("첫 영상을 선택하거나 “재생”을 누르세요.");
+        }
+      });
+
+      els.btnClear.addEventListener("click", () => {
+        list = [];
+        currentIndex = -1;
+        userGestureUnlocked = false;
+        save();
+        render();
+        syncNow();
+        syncControls();
+        setBadge("대기", "neutral");
+        setStatus("비웠습니다.");
+        if (player && player.stopVideo) {
+          try {
+            player.stopVideo();
+          } catch {}
+        }
+      });
+
+      els.btnPrev.addEventListener("click", () => {
+        userGestureUnlocked = true;
+        playPrev(true);
+      });
+      els.btnNext.addEventListener("click", () => {
+        userGestureUnlocked = true;
+        playNext(true);
+      });
+
+      // Resume bug fix: 재생 버튼은 loadVideoById가 아니라 playVideo로 "재개" 우선
+      els.btnPlay.addEventListener("click", async () => {
+        if (currentIndex < 0) return;
+        userGestureUnlocked = true;
+        const it = list[currentIndex];
+        try {
+          await initPlayerIfNeeded(it.id);
+          const state = player.getPlayerState ? player.getPlayerState() : null;
+          if (window.YT && state === window.YT.PlayerState.UNSTARTED) {
+            player.loadVideoById(it.id);
+          } else {
+            player.playVideo();
+          }
+          setBadge("재생 중", "good");
+          setStatus(`재생 중: ${it.label}`);
+        } catch (err) {
+          setBadge("실패", "bad");
+          setStatus(`재생 오류: ${err?.message || String(err)}`);
+        }
+      });
+
+      els.btnPause.addEventListener("click", async () => {
+        if (currentIndex < 0) return;
+        try {
+          await initPlayerIfNeeded(list[currentIndex].id);
+          player.pauseVideo();
+          setBadge("일시정지", "warn");
+          setStatus("일시정지했습니다.");
+        } catch {}
+      });
+
+      // boot
+      load();
+      render();
+      if (list.length) {
+        currentIndex = 0;
+        syncNow();
+        setBadge("준비", "good");
+        setStatus("첫 영상이 준비되었습니다. “재생”을 누르세요.");
+      } else {
+        setBadge("대기", "neutral");
+      }
+      ensureApi().then(() => {
+        apiReady = true;
+        syncControls();
+      });
+    </script>
+  </body>
+</html>
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Continuous Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #0c0c0d; color: #f4f4f5; font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        .glass-panel { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 2rem; }
+        .player-card { background: #000; border-radius: 1.5rem; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.03); }
+        .input-field { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.75rem; }
+        .playlist-item { border-radius: 1rem; transition: all 0.2s; border: 1px solid transparent; }
+        .playlist-item.active { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-5xl space-y-6">
+        <div class="flex justify-between items-center px-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📡</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">Broadcast Player</h1>
+                    <p id="status-desc" class="text-zinc-500 text-xs mt-0.5">서버를 자동 감시 중입니다</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-zinc-800">
+                <span class="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Server: <span id="proxy-name">Checking...</span></span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <div class="lg:col-span-4 glass-panel p-6 h-[500px] flex flex-col">
+                <h2 class="text-sm font-bold flex items-center gap-2 mb-5">재생 목록 <span id="count-badge" class="ml-auto text-[10px] text-zinc-500">0곡</span></h2>
+                
+                <div class="space-y-2 mb-6">
+                    <input id="add-title" type="text" placeholder="제목 (비워두면 자동)" class="w-full input-field p-3 text-xs text-zinc-300 outline-none">
+                    <div class="flex gap-2">
+                        <input id="add-url" type="text" placeholder="URL 또는 ID" class="flex-1 input-field p-3 text-xs text-zinc-300 outline-none">
+                        <button onclick="addVideo()" class="px-4 bg-white text-black text-xs font-bold rounded-lg transition hover:bg-zinc-200">추가</button>
+                    </div>
+                </div>
+
+                <div id="playlist-container" class="flex-grow overflow-y-auto custom-scroll space-y-2 pr-1"></div>
+            </div>
+
+            <div class="lg:col-span-8 space-y-6">
+                <div class="player-card aspect-video shadow-2xl relative bg-black">
+                    <iframe id="main-player" class="w-full h-full" src="" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                </div>
+                
+                <div class="glass-panel px-8 py-5 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <span id="auto-msg" class="text-[10px] text-zinc-500 font-bold uppercase animate-pulse">Auto-Switch Ready</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <button onclick="playPrev()" class="px-6 py-2.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-xs font-bold transition">이전 곡</button>
+                        <button id="play-btn" onclick="togglePlay()" class="px-10 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition">일시정지</button>
+                        <button onclick="playNext()" class="px-6 py-2.5 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-xs font-bold transition">다음 곡</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let playlist = [];
+        let currentIndex = -1;
+        let pIdx = 0;
+        let switchTimer = null;
+
+        // 장애가 발생한 서버를 뒤로 미루고 현재 잘 되는 서버들을 앞에 배치했습니다.
+        const proxies = [
+            'https://invidious.nerdvpn.de/embed/',
+            'https://yt.cdaut.de/embed/',
+            'https://invidious.privacydev.net/embed/',
+            'https://iv.datura.network/embed/',
+            'https://inv.tux.rs/embed/'
+        ];
+
+        function addVideo() {
+            const u = document.getElementById('add-url').value.trim();
+            const t = document.getElementById('add-title').value.trim();
+            const id = u.match(/(?:v=|be\/|embed\/)([^& \n?]+)/)?.[1] || (u.length === 11 ? u : null);
+            if (!id) return alert("유효한 링크를 넣어주세요!");
+            playlist.push({ id, title: t || `곡 ${playlist.length + 1}` });
+            document.getElementById('add-url').value = ""; document.getElementById('add-title').value = "";
+            render(); if (currentIndex === -1) load(0);
+        }
+
+        function render() {
+            const c = document.getElementById('playlist-container');
+            document.getElementById('count-badge').innerText = `${playlist.length}곡`;
+            c.innerHTML = playlist.map((item, i) => `
+                <div onclick="load(${i})" class="playlist-item p-4 cursor-pointer ${i === currentIndex ? 'active' : 'hover:bg-zinc-800/30'}">
+                    <div class="text-xs font-bold ${i === currentIndex ? 'text-blue-400' : 'text-zinc-300'} truncate">${item.title}</div>
+                </div>`).join('');
+        }
+
+        function load(i) {
+            if (i < 0 || i >= playlist.length) return;
+            currentIndex = i;
+            const iframe = document.getElementById('main-player');
+            const pName = new URL(proxies[pIdx]).hostname;
             
-            // ★ 연결 거부 오류가 없는 최신 청정 노드 3선
-            const NODES = [
-                "https://invidious.flokinet.to/embed/",
-                "https://inv.riverside.rocks/embed/",
-                "https://invidious.namazso.eu/embed/"
-            ];
+            document.getElementById('proxy-name').innerText = pName;
+            document.getElementById('status-desc').innerText = "서버 연결 시도 중...";
+            iframe.src = `${proxies[pIdx]}${playlist[i].id}?autoplay=1`;
 
-            let state = { items: [], cur: -1, nIdx: 0 };
-            const dom = {
-                in: document.getElementById('vIn'),
-                frame: document.getElementById('engine'),
-                ui: document.getElementById('ready-ui'),
-                list: document.getElementById('vList'),
-                title: document.getElementById('vTitle'),
-                btn: document.getElementById('mBtn'),
-                stat: document.getElementById('vStat')
+            // ★ 핵심: 5초 동안 응답이 없으면 자동으로 서버 전환
+            clearTimeout(switchTimer);
+            switchTimer = setTimeout(() => {
+                console.log("서버 무응답 감지 - 자동 전환 실행");
+                changeProxyAuto();
+            }, 5000);
+
+            iframe.onload = () => {
+                clearTimeout(switchTimer); // 로딩 성공 시 타이머 해제
+                document.getElementById('status-desc').innerText = "재생 중입니다";
             };
+            render();
+        }
 
-            function init() {
-                const s = localStorage.getItem(KEY);
-                if (s) state.items = JSON.parse(s);
-                refresh();
-            }
+        function changeProxyAuto() {
+            pIdx = (pIdx + 1) % proxies.length;
+            document.getElementById('status-desc').innerText = "서버 장애 감지! 다른 서버로 전환합니다...";
+            load(currentIndex);
+        }
 
-            function load(i) {
-                if (i < 0 || i >= state.items.length) return;
-                state.cur = i;
-                dom.ui.style.display = 'none';
-                // 샌드박스 정책 우회를 위한 쿼리 스트링 최적화
-                dom.frame.src = `${NODES[state.nIdx]}${state.items[i].id}?autoplay=1&m=0&player_style=youtube`;
-                dom.title.innerText = state.items[i].url;
-                dom.btn.innerText = "엔진 정지";
-                refresh();
-            }
+        function togglePlay() {
+            const iframe = document.getElementById('main-player');
+            const btn = document.getElementById('play-btn');
+            if (iframe.src) { iframe.src = ""; btn.innerText = "재생"; }
+            else if (currentIndex !== -1) { load(currentIndex); btn.innerText = "일시정지"; }
+        }
 
-            function add() {
-                const v = dom.in.value.trim();
-                const r = /^.*((youtu.be\/)|(v\/)|(\/u\/\w\/)|(embed\/)|(watch\?))\??v?=?([^#&?]*).*/;
-                const m = v.match(r);
-                const id = (m && m[7].length == 11) ? m[7] : (v.length == 11 ? v : null);
-
-                if (id) {
-                    state.items.push({ id, url: v });
-                    dom.in.value = '';
-                    localStorage.setItem(KEY, JSON.stringify(state.items));
-                    refresh();
-                    if (state.cur === -1) load(0);
-                }
-            }
-
-            function refresh() {
-                dom.stat.innerText = `${state.items.length} ITEMS`;
-                dom.list.innerHTML = state.items.map((t, i) => `
-                    <li class="list-item ${i === state.cur ? 'active' : ''}" onclick="vApp.play(${i})">
-                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:200px;">${t.url}</span>
-                        <span onclick="event.stopPropagation(); vApp.del(${i})" class="btn-x">×</span>
-                    </li>
-                `).join('');
-            }
-
-            return {
-                init, add, play: (i) => load(i),
-                toggle: () => {
-                    if (dom.frame.src) { dom.frame.src = ""; dom.btn.innerText = "엔진 가동"; }
-                    else if (state.cur !== -1) load(state.cur);
-                },
-                nav: (d) => {
-                    if (!state.items.length) return;
-                    load((state.cur + d + state.items.length) % state.items.length);
-                },
-                del: (i) => {
-                    state.items.splice(i, 1);
-                    if (state.cur === i) state.cur = -1;
-                    else if (state.cur > i) state.cur--;
-                    localStorage.setItem(KEY, JSON.stringify(state.items));
-                    refresh();
-                },
-                wipe: () => { if(confirm("RESET?")) { localStorage.clear(); location.reload(); } }
-            };
-        })();
-
-        vApp.init();
+        function playNext() { if (playlist.length) load((currentIndex + 1) % playlist.length); }
+        function playPrev() { if (playlist.length) load((currentIndex - 1 + playlist.length) % playlist.length); }
     </script>
 </body>
 </html>
