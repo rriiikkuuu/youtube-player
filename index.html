@@ -3,96 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>유튜브 연속 재생 플레이어 (디자인 복제)</title>
+    <title>유튜브 연속 재생 플레이어</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #0c0c0d; color: #f4f4f5; font-family: 'Pretendard', sans-serif; overflow-x: hidden; }
-        
-        /* 기존 디자인의 세련된 패널 스타일 */
-        .glass-panel { 
-            background: rgba(30, 30, 35, 0.7); 
-            backdrop-filter: blur(12px); 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            border-radius: 1.5rem; 
-        }
-
-        /* 폰트 및 상태 뱃지 스타일 */
-        .status-badge { 
-            background: #18181b; 
-            color: #3b82f6; 
-            border: 1px solid #27272a; 
-            border-radius: 9999px;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 4px 10px;
-        }
-
-        /* 재생 목록 커스텀 스크롤 */
-        .playlist-scroll::-webkit-scrollbar { width: 5px; }
-        .playlist-scroll::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 10px; }
+        body { background-color: #0c0c0d; color: #f4f4f5; font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        .glass-panel { background: rgba(24, 24, 27, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 2rem; }
+        .player-card { background: #111113; border-radius: 1.5rem; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.03); }
+        .input-field { background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 0.75rem; }
+        .playlist-item { border-radius: 1rem; transition: all 0.2s; border: 1px solid transparent; }
+        .playlist-item.active { background: rgba(59, 130, 246, 0.1); border-color: rgba(59, 130, 246, 0.3); }
+        .custom-scroll::-webkit-scrollbar { width: 4px; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
     </style>
 </head>
-<body class="min-h-screen p-4 md:p-10 flex items-center justify-center">
-    <div class="w-full max-w-6xl mx-auto space-y-6">
-        
-        <div class="flex justify-between items-end px-2">
-            <div>
-                <h1 class="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
-                    <span class="text-blue-500">🎧</span> YouTube Continuous Player
-                </h1>
-                <p class="text-zinc-500 text-sm mt-1">방송실 전용 무광고 모드 [Stable Proxy]</p>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+    <div class="w-full max-w-5xl space-y-6">
+        <div class="flex justify-between items-center px-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🎧</span>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight text-white">YouTube Continuous Player</h1>
+                    <p class="text-zinc-500 text-xs mt-0.5">방송실 전용 무광고 모드 [Stable Proxy]</p>
+                </div>
             </div>
-            <div id="current-status" class="status-badge">Standby</div>
+            <div class="flex items-center gap-2 bg-zinc-900/50 px-3 py-1.5 rounded-full border border-zinc-800">
+                <span id="status-dot" class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                <span id="status-text" class="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Track 1 / 1</span>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             
-            <div class="lg:col-span-4 glass-panel p-6 flex flex-col h-[600px]">
-                <div class="mb-4">
-                    <h2 class="text-lg font-bold flex items-center gap-2 mb-4">
-                        <span class="w-2 h-2 bg-blue-500 rounded-full"></span> 재생 목록
-                        <span id="playlist-count" class="ml-auto text-xs text-zinc-500 font-mono">0곡</span>
-                    </h2>
-                    
-                    <div class="space-y-2 mb-6">
-                        <input id="add-title" type="text" placeholder="제목 (비워두면 자동)" class="w-full bg-zinc-900/50 border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-300 focus:ring-1 focus:ring-blue-500 outline-none">
-                        <div class="flex gap-2">
-                            <input id="add-url" type="text" placeholder="YouTube URL 또는 ID" class="flex-1 bg-zinc-900/50 border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-300 focus:ring-1 focus:ring-blue-500 outline-none">
-                            <button onclick="addVideo()" class="px-4 bg-zinc-100 text-black text-xs font-bold rounded-lg hover:bg-white transition">추가</button>
-                        </div>
+            <div class="lg:col-span-4 glass-panel p-6 h-[520px] flex flex-col">
+                <h2 class="text-sm font-bold flex items-center gap-2 mb-5">
+                    <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span> 재생 목록 
+                    <span id="count-badge" class="ml-auto text-[10px] text-zinc-500">0곡</span>
+                </h2>
+                
+                <div class="space-y-2 mb-6">
+                    <input id="add-title" type="text" placeholder="제목 (비워두면 자동)" class="w-full input-field p-3 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/50">
+                    <div class="flex gap-2">
+                        <input id="add-url" type="text" placeholder="YouTube URL 또는 ID" class="flex-1 input-field p-3 text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/50">
+                        <button onclick="addVideo()" class="px-4 bg-white text-black text-xs font-bold rounded-lg hover:bg-zinc-200 transition">추가</button>
                     </div>
                 </div>
 
-                <div id="playlist-container" class="flex-grow overflow-y-auto playlist-scroll space-y-2 pr-2">
+                <div id="playlist-container" class="flex-grow overflow-y-auto custom-scroll space-y-2 pr-1">
                     </div>
             </div>
 
-            <div class="lg:col-span-8 space-y-4">
-                <div class="glass-panel overflow-hidden shadow-2xl bg-black aspect-video relative">
+            <div class="lg:col-span-8 space-y-6">
+                <div class="player-card aspect-video shadow-2xl relative bg-black">
                     <iframe id="main-player" class="w-full h-full" src="" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>
-                    <div id="player-overlay" class="absolute inset-0 bg-zinc-900 flex flex-col items-center justify-center gap-4 transition-opacity duration-500">
-                        <span class="text-4xl opacity-20">📺</span>
-                        <p class="text-zinc-500 text-sm">목록에서 곡을 추가하고 재생을 시작하세요</p>
-                    </div>
                 </div>
                 
-                <div class="glass-panel p-6 flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center gap-6">
+                <div class="glass-panel px-8 py-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
                         <label class="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" id="auto-next" checked class="sr-only peer">
-                            <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            <span class="ml-3 text-sm font-medium text-zinc-300">자동 재생</span>
+                            <div class="w-10 h-5 bg-zinc-800 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ml-3 text-xs font-medium text-zinc-400 uppercase tracking-tighter">자동 재생</span>
                         </label>
                     </div>
                     
-                    <div class="flex gap-3">
-                        <button onclick="playPrev()" class="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 font-semibold transition text-sm">이전 곡</button>
-                        <button id="play-btn" onclick="togglePlay()" class="px-8 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition text-sm shadow-lg shadow-blue-900/20">재생 / 일시정지</button>
-                        <button onclick="playNext()" class="px-5 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 font-semibold transition text-sm">다음 곡</button>
+                    <div class="flex items-center gap-3">
+                        <button onclick="playPrev()" class="px-6 py-2 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-xs font-bold transition">이전 곡</button>
+                        <button id="play-btn" onclick="togglePlay()" class="px-10 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold transition shadow-lg shadow-blue-900/20">일시정지</button>
+                        <button onclick="playNext()" class="px-6 py-2 rounded-xl bg-zinc-800/50 hover:bg-zinc-800 text-xs font-bold transition">다음 곡</button>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -101,114 +82,45 @@
         let currentIndex = -1;
         let isPlaying = false;
         let elapsedSec = 0;
-
-        // 클로드와 상의했던 무광고 프록시 목록 (안정적인 것 위주)
-        const proxies = [
-            'https://inv.tux.rs/embed/',
-            'https://yt.cdaut.de/embed/',
-            'https://invidious.nerdvpn.de/embed/',
-            'https://invidious.privacydev.net/embed/'
-        ];
-
-        function parseVideoId(input) {
-            const match = input.match(/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^& \n?]+)/);
-            return match ? match[1] : (input.length === 11 ? input : null);
-        }
+        const proxies = ['https://inv.tux.rs/embed/', 'https://yt.cdaut.de/embed/', 'https://invidious.nerdvpn.de/embed/'];
 
         function addVideo() {
-            const urlInput = document.getElementById('add-url');
-            const titleInput = document.getElementById('add-title');
-            const videoId = parseVideoId(urlInput.value.trim());
-            
-            if (!videoId) return alert("올바른 유튜브 링크를 입력하세요.");
-            
-            const title = titleInput.value.trim() || `Track ${playlist.length + 1}`;
-            playlist.push({ id: videoId, title: title });
-            
-            urlInput.value = "";
-            titleInput.value = "";
-            renderPlaylist();
-            if (currentIndex === -1) loadVideo(0);
+            const u = document.getElementById('add-url').value.trim();
+            const t = document.getElementById('add-title').value.trim();
+            const id = u.match(/(?:v=|be\/|embed\/)([^& \n?]+)/)?.[1] || (u.length === 11 ? u : null);
+            if (!id) return;
+            playlist.push({ id, title: t || `Track ${playlist.length + 1}` });
+            document.getElementById('add-url').value = ""; document.getElementById('add-title').value = "";
+            render(); if (currentIndex === -1) load(0);
         }
 
-        function renderPlaylist() {
-            const container = document.getElementById('playlist-container');
-            const countLabel = document.getElementById('playlist-count');
-            container.innerHTML = "";
-            countLabel.innerText = `${playlist.length}곡`;
-
-            playlist.forEach((item, index) => {
-                const isActive = index === currentIndex;
-                const div = document.createElement('div');
-                div.className = `p-3 rounded-xl cursor-pointer transition flex items-center justify-between ${isActive ? 'bg-blue-600/10 border border-blue-500/30' : 'hover:bg-zinc-800/50 border border-transparent'}`;
-                div.innerHTML = `
-                    <div class="flex flex-col min-w-0" onclick="loadVideo(${index})">
-                        <span class="text-xs font-bold ${isActive ? 'text-blue-400' : 'text-zinc-300'} truncate">${item.title}</span>
-                        <span class="text-[10px] text-zinc-600 font-mono">${item.id}</span>
-                    </div>
-                    <button onclick="removeVideo(${index})" class="text-zinc-600 hover:text-red-500 px-2">✕</button>
-                `;
-                container.appendChild(div);
-            });
+        function render() {
+            const c = document.getElementById('playlist-container');
+            document.getElementById('count-badge').innerText = `${playlist.length}곡`;
+            c.innerHTML = playlist.map((item, i) => `
+                <div onclick="load(${i})" class="playlist-item p-4 cursor-pointer ${i === currentIndex ? 'active' : 'hover:bg-zinc-800/30'}">
+                    <div class="text-xs font-bold ${i === currentIndex ? 'text-blue-400' : 'text-zinc-300'} truncate">${item.title}</div>
+                    <div class="text-[10px] text-zinc-600 font-mono mt-1">${item.id}</div>
+                </div>`).join('');
         }
 
-        function loadVideo(index, startSec = 0) {
-            if (index < 0 || index >= playlist.length) return;
-            currentIndex = index;
-            elapsedSec = startSec;
-            
-            const player = document.getElementById('main-player');
-            const overlay = document.getElementById('player-overlay');
-            const statusBadge = document.getElementById('current-status');
-            const playBtn = document.getElementById('play-btn');
-            
-            overlay.style.opacity = "0";
-            setTimeout(() => overlay.classList.add('hidden'), 500);
-            
-            // 안정적인 프록시를 사용하여 광고 최소화
-            player.src = `${proxies[0]}${playlist[index].id}?autoplay=1&start=${Math.floor(startSec)}&rel=0&modestbranding=1`;
-            isPlaying = true;
-            statusBadge.innerText = `Track ${index + 1} / ${playlist.length}`;
-            playBtn.innerText = "일시정지";
-            renderPlaylist();
+        function load(i, s = 0) {
+            if (i < 0 || i >= playlist.length) return;
+            currentIndex = i; elapsedSec = s; isPlaying = true;
+            document.getElementById('main-player').src = `${proxies[0]}${playlist[i].id}?autoplay=1&start=${s}&modestbranding=1`;
+            document.getElementById('status-text').innerText = `Track ${i + 1} / ${playlist.length}`;
+            document.getElementById('play-btn').innerText = "일시정지";
+            render();
         }
 
         function togglePlay() {
-            if (currentIndex === -1) return;
-            const playBtn = document.getElementById('play-btn');
-            if (isPlaying) {
-                isPlaying = false;
-                playBtn.innerText = "재생";
-                document.getElementById('main-player').src = ""; // 임베드 특성상 src를 비워 정지
-            } else {
-                loadVideo(currentIndex, elapsedSec);
-            }
+            const btn = document.getElementById('play-btn');
+            if (isPlaying) { isPlaying = false; btn.innerText = "재생"; document.getElementById('main-player').src = ""; }
+            else { load(currentIndex, elapsedSec); }
         }
 
-        function playNext() {
-            if (playlist.length === 0) return;
-            const nextIndex = (currentIndex + 1) % playlist.length;
-            loadVideo(nextIndex);
-        }
-
-        function playPrev() {
-            if (playlist.length === 0) return;
-            const prevIndex = (currentIndex - 1 + playlist.length) % playlist.length;
-            loadVideo(prevIndex);
-        }
-
-        function removeVideo(index) {
-            playlist.splice(index, 1);
-            if (currentIndex === index) {
-                currentIndex = -1;
-                document.getElementById('main-player').src = "";
-            } else if (currentIndex > index) {
-                currentIndex--;
-            }
-            renderPlaylist();
-        }
-
-        // 재생 시간 추적용 타이머 (Resume 기능용)
+        function playNext() { if (playlist.length) load((currentIndex + 1) % playlist.length); }
+        function playPrev() { if (playlist.length) load((currentIndex - 1 + playlist.length) % playlist.length); }
         setInterval(() => { if(isPlaying) elapsedSec++; }, 1000);
     </script>
 </body>
